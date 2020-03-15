@@ -1,0 +1,302 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Accessory Dwelling Units</title>
+
+    <script src="js/mapbox-gl.js"></script>
+    <script src="js/city.js"></script>
+    <link rel="stylesheet" href="css/mapbox-gl.css">
+    <script src='js/turf.min.js'></script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      }
+
+      html, body {
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        flex: 1;
+        color: #333;
+      }
+
+      #description {
+        flex-basis: 30rem;
+        padding: 1rem;
+        overflow-y: auto;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      h2 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      h1, h3, p {
+        margin-bottom: 1rem;
+      }
+
+      #map {
+        flex: 1;
+      }
+
+      .img {
+        height: 200px;
+        display: flex;
+        margin-bottom: 1rem;
+      }
+
+      .yep, .nope {
+        flex: 1;
+        background: transparent url('img/yep.jpg') no-repeat right center;
+        background-size: cover;
+      }
+      .nope {
+        background: transparent url('img/nope.jpg') no-repeat center center;
+      }
+      @media only screen and (max-width: 900px) {
+        body {
+          height: auto;
+          display: block;
+          padding-bottom: 5rem;
+        }
+
+        #description {
+          height: auto;
+          flex-basis: none;
+        }
+
+        #map {
+          height: 80vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="description">
+      <h1>Can you build an Accessory Dwelling Unit (ADU) in Ann Arbor?</h1>
+
+      <h2>Which do you prefer?</h2>
+      <div class="img">
+        <div class="yep"></div>
+        <div class="nope"></div>
+      </div>
+
+      <p>
+        The City says it best: &ldquo;an Accessory Dwelling Unit is a second, smaller dwelling unit either developed within an
+        existing single-familyhouse (such as in a basement, attic, or addition) or
+         part of an accessory building (such as a converted garage or carriage house).&rdquo;</p>
+
+      <p>ADU's are a great way to increase affordability and improve the environment, both for homeowners and renters.
+        For homeowners, they open up a stream of income on existing property.
+        For renters, they open up much-needed housing.
+      </p>
+
+      <p>
+        This map shows the lots that likely are allowed to build an ADU. The green lots are zoned correctly
+        and big enough. The yellow lots are zoned correctly but too small.
+      </p>
+
+      <p>
+        We're only allowed one ADU per lot. If everyone built one tomorrow, we'd add over 16,000 units.
+        That's not nearly enough for the <a href="https://www.mlive.com/news/ann-arbor/2018/04/ann_arbor_grapples_with_street.html">80,000 people</a>
+        who burn fossil fuels to drive in to Ann Arbor every day. But it's a start!
+      </p>
+
+      <p>
+        The City of Ann Arbor has a
+        <a href="https://www.a2gov.org/departments/planning/Documents/Planning/Accessory%20Dwelling%20Unit%20Guidebook%203-3-2020.pdf">very readable handbook</a>,
+        and of course if you are actually planning on building something, you should contact the City
+        instead of trusting this website.
+      </p>
+
+      <p>Last updated March 2020.</p>
+    </div>
+    <div id="map"></div>
+
+    <script>
+
+      // colors https://tailwindcss.com/docs/customizing-colors/#default-color-palette
+
+      var source = 'osm'
+
+      var allowed = ['R1C', 'R1D', 'R1E', 'R1A', 'R1B',]
+
+      var world = [-180.0, -80.0, 180.0, 84.0 ]
+      var bounds = [
+      -83.799559, 42.222663, -83.6768423, 42.323659
+      ];
+      var maskPoly = turf.polygon(ann_arbor.coordinates);
+
+      var roads = {
+        'id': 'transportation',
+        'type': 'line',
+        'source': 'osm',
+        'source-layer': 'transportation',
+        "filter": ["in", "class", "primary", "secondary", "tertiary", "trunk", "motorway_link", "trunk_link", "primary_link", "secondary_link", "road", "minor", "alley"],
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        'paint': {
+          'line-opacity': 0.6,
+          'line-color': '#CBD5E0',
+          'line-width': 2
+        }
+      }
+
+      var border = {
+        'id': 'border',
+        'type': 'line',
+        'source': 'border',
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        'paint': {
+          'line-opacity': 1,
+          'line-color': '#EDF2F7',
+          'line-width': 2
+        }
+      }
+
+      var parcels = {
+        'id': 'parcels',
+        'type': 'line',
+        'source': 'parcels',
+        'source-layer': 'mi_washtenaw_parcels',
+        'layout': {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        'paint': {
+          'line-opacity': 0.4,
+          'line-color': '#CBD5E0',
+          'line-width': 1
+        }
+      }
+      //#009392,#39b185,#9ccb86,#e9e29c,#eeb479,#e88471,#cf597e
+
+      var allowed = {
+        'id': 'parcels-allowed',
+        'type': 'fill',
+        'source': 'parcels',
+        'source-layer': 'mi_washtenaw_parcels',
+        "filter": ["all", ["in", "zoning", 'R1C', 'R1D', 'R1E', 'R1A', 'R1B'], [">=", "ll_gissqft", 5000]],
+        'paint': {
+          'fill-opacity': 0.4,
+          'fill-color': '#68D391',
+        }
+      }
+
+      var too_small = {
+        'id': 'parcels-too-small',
+        'type': 'fill',
+        'source': 'parcels',
+        'source-layer': 'mi_washtenaw_parcels',
+        "filter": ["all", ["in", "zoning", 'R1C', 'R1D', 'R1E', 'R1A', 'R1B'], ["<", "ll_gissqft", 5000]],
+        'paint': {
+          'fill-opacity': 0.4,
+          'fill-color': '#F6E05E',
+        }
+      }
+
+      var labels = {
+        "id": "highway-name-major",
+        "type": "symbol",
+        "source": source,
+        "source-layer": "transportation_name",
+        "minzoom": 12.2,
+        "filter": ["in", "class", "primary", "secondary", "tertiary", "trunk", "minor"],
+        "layout": {
+          "symbol-placement": "line",
+          "text-field": "{name:latin} {name:nonlatin}",
+          "text-font": ["Open Sans Semibold"],
+          "text-rotation-alignment": "map",
+          "text-size": {"base": 4, "stops": [[13, 12], [14, 13]]}
+        },
+        "paint": {
+          "text-color": "rgba(0, 0, 0, 1)",
+          "text-halo-blur": 0.5,
+          "text-halo-color": "rgba(255, 255, 255, 1)",
+          "text-halo-width": 1
+        }
+      };
+
+      var mask = {
+        id: 'mask',
+        source: 'mask',
+        type: 'fill',
+        paint: {
+          "fill-color": "white",
+          'fill-opacity': 0.85
+        }
+      }
+
+      var map = new mapboxgl.Map({
+        container: 'map',
+        //zoom: 12,
+        //center: [-83.745460, 42.281319],
+        bounds: bounds,
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              'type': 'vector',
+              'tiles': [
+                location.origin+location.pathname + 'tiles/{z}/{x}/{y}.pbf'
+              ],
+              'minzoom': 8,
+              'maxzoom': 14
+            },
+            parcels: {
+              'type': 'vector',
+              'tiles': [
+                location.origin+location.pathname + 'parcel_tiles/{z}/{x}/{y}.pbf'
+              ],
+              'minzoom': 9,
+              'maxzoom': 13
+            },
+            mask: {
+              type: "geojson",
+              data: polyMask(maskPoly, world)
+            },
+            border: {
+              type: "geojson",
+              data: ann_arbor
+            },
+          }, //sources
+          "glyphs": location.origin+location.pathname+"font/{fontstack}/{range}.pbf",
+          layers: [roads, parcels, allowed, too_small, labels, mask, border]
+        }
+      });
+
+      map.on('load', function() {
+
+        map.on('mousemove', 'transportation', function(e) {
+          if (e.features.length > 0) {
+            // console.log('xxx roads', e.features[0].properties)
+          }
+        });
+
+        map.on('mousemove', 'parcels', function(e) {
+          if (e.features.length > 0) {
+            // console.log('xxx parcels', e.features[0].properties)
+          }
+        });
+      });
+
+      function polyMask(mask, bounds) {
+        var bboxPoly = turf.bboxPolygon(bounds);
+        var diff = turf.difference(bboxPoly, mask);
+        return diff;
+      }
+    </script>
+  </body>
+</html>
