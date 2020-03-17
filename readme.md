@@ -55,7 +55,7 @@ ogr2ogr -f GeoJSON mi_washtenaw_parcels.geojson pg:'user=matth password= host=lo
 Render the parcels with tippecanoe:
 
 ```
-tippecanoe --output-to-directory=parcel_tiles mi_washtenaw_parcels.geojson --read-parallel --include=address --include=zoning --include=ll_gissqft --no-tile-compression -X -P -g2 -f --coalesce-densest-as-needed --detect-shared-borders --no-tiny-polygon-reduction
+tippecanoe --output-to-directory=parcel_tiles mi_washtenaw_parcels.geojson --read-parallel --include=address --include=zoning --include=ll_gissqft --no-tile-compression -f --coalesce-densest-as-needed --detect-shared-borders --no-tiny-polygon-reduction --simplify-only-low-zooms
 ```
 
 To copy it over (I render it in a different directory)
